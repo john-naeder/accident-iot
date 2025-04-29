@@ -1,0 +1,196 @@
+@page "/login"
+@using AccidentMonitor.WebApp.Models
+@using AccidentMonitor.WebApp.Services
+@using Microsoft.AspNetCore.Components.Web
+@inject IAuthService AuthService
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Login - Accident Monitor System</PageTitle>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card mt-5">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Login</h3>
+                </div>
+                <div class="card-body">
+                    <form @onsubmit="HandleLogin" @onsubmit:preventDefault>
+                        <div class="text-danger validation-summary">
+                            @foreach (var error in validationErrors)
+                            {
+                                <div>@error</div>
+                            }
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(errorMessage))
+                        {
+                            <div class="alert alert-danger">
+                                @errorMessage
+                            </div>
+                        }
+
+                        <div class="form-group mb-3">
+                            <label for="email">Email</label>
+                            <input id="email" type="email" class="form-control @(IsEmailInvalid() ? "is-invalid" : "")" 
+                                   @bind="loginModel.Email" @bind:event="oninput" required />
+                            @if (IsEmailInvalid())
+                            {
+                                <div class="invalid-feedback">
+                                    Please enter a valid email address.
+                                </div>
+                            }
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="password">Password</label>
+                            <input id="password" type="password" class="form-control @(IsPasswordInvalid() ? "is-invalid" : "")" 
+                                   @bind="loginModel.Password" @bind:event="oninput" required />
+                            @if (IsPasswordInvalid())
+                            {
+                                <div class="invalid-feedback">
+                                    Password is required.
+                                </div>
+                            }
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input id="rememberMe" type="checkbox" class="form-check-input" 
+                                   @bind="loginModel.RememberMe" />
+                            <label class="form-check-label" for="rememberMe">
+                                Remember me
+                            </label>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <button type="submit" class="btn btn-primary" disabled="@isLoading">
+                                @if (isLoading)
+                                {
+                                    <span class="spinner-border spinner-border-sm mr-1" role="status" aria-hidden="true"></span>
+                                    <span>Processing...</span>
+                                }
+                                else
+                                {
+                                    <span>Login</span>
+                                }
+                            </button>
+                            <a href="/register" class="text-primary">Don't have an account? Register</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private LoginRequest loginModel = new();
+    private string? errorMessage;
+    private bool isLoading = false;
+    private List<string> validationErrors = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Check if we're in the browser environment
+        if (!OperatingSystem.IsBrowser())
+        {
+            return;
+        }
+        
+        // Check if user is already logged in, redirect to dashboard
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            NavigationManager.NavigateTo("/dashboard", forceLoad: true);
+        }
+    }
+
+    private bool IsEmailInvalid()
+    {
+        if (string.IsNullOrEmpty(loginModel.Email))
+            return true;
+            
+        // Basic email validation
+        return !loginModel.Email.Contains('@') || !loginModel.Email.Contains('.');
+    }
+
+    private bool IsPasswordInvalid()
+    {
+        return string.IsNullOrEmpty(loginModel.Password);
+    }
+
+    private bool ValidateForm()
+    {
+        validationErrors.Clear();
+        
+        if (IsEmailInvalid())
+            validationErrors.Add("Please enter a valid email address.");
+            
+        if (IsPasswordInvalid())
+            validationErrors.Add("Password is required.");
+            
+        return validationErrors.Count == 0;
+    }
+
+    private async Task HandleLogin()
+    {
+        if (!ValidateForm())
+            return;
+            
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            var result = await AuthService.Login(loginModel);
+            if (result.Successful)
+            {
+                // Notify AuthenticationStateProvider about authentication state change
+                ((CustomAuthenticationStateProvider)AuthStateProvider).NotifyAuthenticationStateChanged();
+                
+                // Redirect to dashboard after successful login with forceLoad to avoid navigation loops
+                NavigationManager.NavigateTo("/dashboard", forceLoad: true);
+            }
+            else
+            {
+                errorMessage = result.Error ?? "Login failed. Please check your credentials.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}
+
+<style>
+    .card {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        border: none;
+        border-radius: 8px;
+    }
+    
+    .card-header {
+        border-radius: 8px 8px 0 0 !important;
+    }
+
+    .form-control:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    
+    .btn-primary {
+        padding: 0.5rem 1.5rem;
+    }
+    
+    .validation-summary {
+        margin-bottom: 1rem;
+    }
+</style>

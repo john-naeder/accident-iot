@@ -1,0 +1,13 @@
+# pack-refs with: peeled fully-peeled sorted 
+f8dabca50d82153af9fee6363de1d5615071aedb refs/heads/develop
+ea2f737d254f6becd1c037ae17e160c84570ac8a refs/heads/feature/accident-monitor-add-aspire-support
+1b05e0f814348d86a84315a0a08d3d55055b220a refs/heads/feature/add-blocking-polygon
+521b451a9e4792e28182d8c12ec7a30398eec5c5 refs/heads/feature/add-dns-server
+edfa629f2bad3302ba35582ef65cdf2a9b9a1a6c refs/heads/feature/add-redis-caching
+521b451a9e4792e28182d8c12ec7a30398eec5c5 refs/heads/feature/web-app
+a293248dbd1db7a8d82ed2220c4b9b39e68ed4a7 refs/heads/fix/dockerfile-build-error
+8884062d868d5c5ce4dcd7ed15f604b75a677c4c refs/heads/main
+be550806d82eb0c4c5cd6fcfe3f50d853be03b6c refs/remotes/accident-monitor/develop
+f79d7578cbd3ac6fd9c905c074f9b7f846505cae refs/remotes/accident-monitor/feature/add-blocking-polygon
+567b2ab2ebe2377a6580f6e4ddff84f6045a3472 refs/remotes/accident-monitor/main
+ce5d50490d547d6e52fb3ac8b59418dc61af9dcb refs/stash

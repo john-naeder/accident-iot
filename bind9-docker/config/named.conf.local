@@ -1,0 +1,10 @@
+zone "duydz.tao" {
+    type master;
+    file "/etc/bind/zones/db.duydz.tao";
+    allow-update { none; };
+};
+zone "0.0.127.in-addr.arpa" IN {
+    type master;
+    file "/etc/bind/zones/db.127.0.0";
+    allow-update { none; };
+};

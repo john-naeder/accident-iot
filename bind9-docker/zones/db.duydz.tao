@@ -1,0 +1,26 @@
+$TTL 600      
+@       IN      SOA     dns-services.local.lan. admin.duydz.tao.  (
+                        13         ; Serial (increment this number for each change)
+                        604800    ; Refresh (1 week)
+                        86400     ; Retry (1 day)
+                        2419200   ; Expire (4 weeks)
+                        600 )     ; Negative Cache TTL (10 minutes)
+
+        IN      NS      localhost. ; Name Server
+;@       IN      A       172.20.10.8     ; duydz.tao   -> 172.20.10.8
+;*       IN      A       172.20.10.8     ; *.duydz.tao -> 172.20.10.8
+;@       IN      A       172.18.0.2      ; duydz.tao   -> 172.18.0.2
+;*       IN      A       172.18.0.2      ; *.duydz.tao -> 172.18.0.2
+;@       IN      A       192.168.6.222   ; duydz.tao   -> 192.168.6.222
+;*       IN      A       192.168.6.222   ; *.duydz.tao -> 192.168.6.222
+;@       IN      A       192.168.80.1    ; duydz.tao   -> 192.168.80.1
+;*       IN      A       192.168.80.1    ; *.duydz.tao -> 192.168.80.1
+;@       IN      A       192.168.100.54  ; duydz.tao   -> 192.168.100.54
+;*       IN      A       192.168.100.54  ; *.duydz.tao -> 192.168.100.54
+@       IN      A       192.168.1.7  ; duydz.tao   -> 192.168.1.7
+*       IN      A       192.168.1.7  ; *.duydz.tao -> 192.168.1.7
+
+;*.duydz.tao.                  IN      A       192.168.6.222
+;*.duydz.tao.                  IN      A       192.168.100.54
+;*.duydz.tao.                  IN      A       172.20.10.8
+*.duydz.tao.                  IN      A       192.168.1.7

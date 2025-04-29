@@ -1,0 +1,104 @@
+@page "/profile"
+@using AccidentMonitor.WebApp.Models
+@using AccidentMonitor.WebApp.Services
+@using Microsoft.AspNetCore.Authorization
+@inject IAuthService AuthService
+@inject NavigationManager NavigationManager
+@attribute [Authorize]
+
+<PageTitle>My Profile - Accident Monitor System</PageTitle>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card mt-5">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">My Profile</h3>
+                </div>
+                <div class="card-body">
+                    @if (userInfo == null)
+                    {
+                        <div class="d-flex justify-content-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5>Account Information</h5>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Email</label>
+                                    <p>@userInfo.Email</p>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">User ID</label>
+                                    <p>@userInfo.Id</p>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">First Name</label>
+                                    <p>@(string.IsNullOrEmpty(userInfo.FirstName) ? "-" : userInfo.FirstName)</p>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Last Name</label>
+                                    <p>@(string.IsNullOrEmpty(userInfo.LastName) ? "-" : userInfo.LastName)</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h5>Role Information</h5>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Roles</label>
+                                    @if (userInfo.Roles != null && userInfo.Roles.Any())
+                                    {
+                                        <ul>
+                                            @foreach (var role in userInfo.Roles)
+                                            {
+                                                <li>@role</li>
+                                            }
+                                        </ul>
+                                    }
+                                    else
+                                    {
+                                        <p>No roles assigned</p>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-center mt-3">
+                            <button class="btn btn-danger" @onclick="HandleLogout">Logout</button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private UserInfo? userInfo;
+
+    protected override async Task OnInitializedAsync()
+    {
+        userInfo = await AuthService.GetUserInfo();
+    }
+
+    private async Task HandleLogout()
+    {
+        await AuthService.Logout();
+        NavigationManager.NavigateTo("/login");
+    }
+}
+
+<style>
+    .card {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        border: none;
+        border-radius: 8px;
+    }
+    
+    .card-header {
+        border-radius: 8px 8px 0 0 !important;
+    }
+</style>

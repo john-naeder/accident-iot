@@ -1,0 +1,183 @@
+@page "/register"
+@using AccidentMonitor.WebApp.Models
+@using AccidentMonitor.WebApp.Services
+@using Microsoft.AspNetCore.Components.Web
+@inject IAuthService AuthService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Register - Accident Monitor System</PageTitle>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card mt-5">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Register</h3>
+                </div>
+                <div class="card-body">
+                    <form @onsubmit="HandleRegistration" @onsubmit:preventDefault>
+                        <div class="text-danger validation-summary">
+                            @foreach (var error in validationErrors)
+                            {
+                                <div>@error</div>
+                            }
+                        </div>
+
+                        @if (registrationErrors != null && registrationErrors.Any())
+                        {
+                            <div class="alert alert-danger">
+                                <ul class="mb-0">
+                                    @foreach (var error in registrationErrors)
+                                    {
+                                        <li>@error</li>
+                                    }
+                                </ul>
+                            </div>
+                        }
+
+                        <div class="form-group mb-3">
+                            <label for="email">Email</label>
+                            <input id="email" type="email" class="form-control @(IsEmailInvalid() ? "is-invalid" : "")" 
+                                   @bind="registrationModel.Email" @bind:event="oninput" required />
+                            @if (IsEmailInvalid())
+                            {
+                                <div class="invalid-feedback">
+                                    Please enter a valid email address.
+                                </div>
+                            }
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="password">Password</label>
+                            <input id="password" type="password" class="form-control @(IsPasswordInvalid() ? "is-invalid" : "")" 
+                                   @bind="registrationModel.Password" @bind:event="oninput" required />
+                            @if (IsPasswordInvalid())
+                            {
+                                <div class="invalid-feedback">
+                                    Password must be at least 6 characters long.
+                                </div>
+                            }
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label for="confirmPassword">Confirm Password</label>
+                            <input id="confirmPassword" type="password" class="form-control @(IsConfirmPasswordInvalid() ? "is-invalid" : "")" 
+                                   @bind="registrationModel.ConfirmPassword" @bind:event="oninput" required />
+                            @if (IsConfirmPasswordInvalid())
+                            {
+                                <div class="invalid-feedback">
+                                    Passwords do not match.
+                                </div>
+                            }
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <button type="submit" class="btn btn-primary" disabled="@isLoading">
+                                @if (isLoading)
+                                {
+                                    <span class="spinner-border spinner-border-sm mr-1" role="status" aria-hidden="true"></span>
+                                    <span>Processing...</span>
+                                }
+                                else
+                                {
+                                    <span>Register</span>
+                                }
+                            </button>
+                            <a href="/login" class="text-primary">Already have an account? Login</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private RegistrationRequest registrationModel = new();
+    private IEnumerable<string>? registrationErrors;
+    private bool isLoading = false;
+    private List<string> validationErrors = new();
+
+    private bool IsEmailInvalid()
+    {
+        if (string.IsNullOrEmpty(registrationModel.Email))
+            return true;
+            
+        // Basic email validation
+        return !registrationModel.Email.Contains('@') || !registrationModel.Email.Contains('.');
+    }
+
+    private bool IsPasswordInvalid()
+    {
+        return string.IsNullOrEmpty(registrationModel.Password) || registrationModel.Password.Length < 6;
+    }
+
+    private bool IsConfirmPasswordInvalid()
+    {
+        return string.IsNullOrEmpty(registrationModel.ConfirmPassword) || 
+               registrationModel.Password != registrationModel.ConfirmPassword;
+    }
+
+    private bool ValidateForm()
+    {
+        validationErrors.Clear();
+        
+        if (IsEmailInvalid())
+            validationErrors.Add("Please enter a valid email address.");
+            
+        if (IsPasswordInvalid())
+            validationErrors.Add("Password must be at least 6 characters long.");
+            
+        if (IsConfirmPasswordInvalid())
+            validationErrors.Add("Passwords do not match.");
+            
+        return validationErrors.Count == 0;
+    }
+
+    private async Task HandleRegistration()
+    {
+        if (!ValidateForm())
+            return;
+            
+        isLoading = true;
+        registrationErrors = null;
+
+        try
+        {
+            var result = await AuthService.Register(registrationModel);
+            if (result.Successful)
+            {
+                // Redirect to login page after successful registration with forceLoad to avoid navigation issues
+                NavigationManager.NavigateTo("/login", forceLoad: true);
+            }
+            else
+            {
+                registrationErrors = result.Errors ?? new[] { "Registration failed. Please try again." };
+            }
+        }
+        catch (Exception ex)
+        {
+            registrationErrors = new[] { $"An error occurred: {ex.Message}" };
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}
+
+<style>
+    .card {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        border: none;
+        border-radius: 8px;
+    }
+    
+    .card-header {
+        border-radius: 8px 8px 0 0 !important;
+    }
+    
+    .validation-summary {
+        margin-bottom: 1rem;
+    }
+</style>

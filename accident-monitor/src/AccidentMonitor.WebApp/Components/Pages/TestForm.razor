@@ -1,0 +1,17 @@
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Web
+
+<div class="form-group">
+    <label for="testInput">Test Input</label>
+    <input id="testInput" class="form-control" />
+</div>
+
+<div class="form-group">
+    <label for="testValidatedInput">Validated Input</label>
+    <InputText id="testValidatedInput" class="form-control" />
+    <ValidationMessage For="@(() => testModel)" />
+</div>
+
+@code {
+    private string testModel = string.Empty;
+}

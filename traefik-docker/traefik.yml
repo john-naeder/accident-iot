@@ -1,0 +1,43 @@
+# Docker configuration backend
+
+log:
+  level: DEBUG
+
+providers:
+  docker:
+    exposedByDefault: false
+    defaultRule: "Host({{ trimPrefix `/` .Name }}.duydz.tao)"
+    network: net_sim
+
+
+api:
+  insecure: true
+  dashboard: true
+
+entryPoints:
+  mqtt:
+    address: ":1883"
+
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+    http:
+      tls:
+        certResolver: myresolver
+  websocket:
+    address: ":9001"
+
+
+tls:
+  options:
+    default:
+      minVersion: VersionTLS13
+      sniStrict: true
+      cipherSuites:
+        - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+        - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305
+  certificates:
+    - certFile: "/etc/traefik/certs/accident-monitor.crt"
+      keyFile: "/etc/traefik/certs/accident-monitor.key"

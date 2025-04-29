@@ -1,0 +1,249 @@
+﻿services:
+  # ----------------- event-driven applications ------------------- #
+  # node-red:
+  #   image: nodered/node-red:latest
+  #   container_name: node-red
+  #   ports:
+  #     - "1881:1880"
+  #   volumes:
+  #     - ./rednode-docker/data:/data
+  #   restart: unless-stopped
+  #   deploy:
+  #     restart_policy:
+  #       condition: on-failure
+  #       delay: 5s
+  #       max_attempts: 5
+  #       window: 120s
+  #   networks:
+  #     - net_sim
+
+  # -------------------------- Visualization Dashboard ------------------------ #
+  grafana:
+    image: grafana/grafana-oss:11.6.0
+    container_name: grafana
+    # ports:
+    #   - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana-docker/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_USER=johnnaeder
+      - GF_SECURITY_ADMIN_PASSWORD=Taodeptrai123@
+      - GF_SERVER_ROOT_URL=https://grafana.duydz.tao
+    depends_on:
+      - influxdb
+    expose:
+      - "80" 
+    networks:
+      net_sim:
+        ipv4_address: 172.20.0.7
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+      - "traefik.http.routers.grafana-http.entrypoints=web"
+      - "traefik.http.routers.grafana-http.rule=Host(`grafana.duydz.tao`)"
+      - "traefik.http.routers.grafana-https.entrypoints=websecure"
+      - "traefik.http.routers.grafana-https.rule=Host(`grafana.duydz.tao`)"
+      - "traefik.http.routers.grafana-https.tls=true"
+
+  # -------------------------- MQTT broker ------------------------ #
+  mosquitto:
+    image: eclipse-mosquitto:2.0.21
+    hostname: mosquitto
+    container_name: mosquitto
+    ports:
+      - "1884:1883" # Port for Non-TLS-SNI connections
+      - "9002:9001" # Port for Non-Tls-SNI connections
+    stdin_open: true 
+    tty: true
+    volumes:
+      - ./mosquitto-docker/config:/mosquitto/config
+      - ./mosquitto-docker/data:/mosquitto/data
+      - ./mosquitto-docker/log:/mosquitto/log
+    restart: unless-stopped
+    # deploy:
+    #   restart_policy:
+    #     condition: on-failure
+    #     delay: 5s
+    #     max_attempts: 5
+    #     window: 120s
+    networks:
+      net_sim:
+        ipv4_address: 172.20.0.10
+    expose:
+      - "1883"
+      - "9001"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.tcp.services.mqtt.loadbalancer.server.port=1883"
+      - "traefik.tcp.services.mqtt_websocket.loadbalancer.server.port=9001"
+      - "traefik.tcp.routers.tcpr_mqtt.service=mqtt"
+      - "traefik.tcp.routers.tcpr_mqtt.entrypoints=mqtt"
+      - "traefik.tcp.routers.tcpr_mqtt.rule=HostSNI(`mqtt.duydz.tao`)"
+      - "traefik.tcp.routers.tcpr_mqtt_websocket.entrypoints=websocket"
+      - "traefik.tcp.routers.tcpr_mqtt_websocket.service=mqtt_websocket"
+      - "traefik.tcp.routers.tcpr_mqtt_websocket.rule=HostSNI(`mqtt.duydz.tao`)"
+      - "traefik.tcp.routers.tcpr_mqtt_websocket.tls=true"
+      - "traefik.tcp.routers.tcpr_mqtt.tls=true"
+      - "traefik.tcp.routers.tcpr_mqtt.tls.passthrough=true"
+
+    healthcheck:
+      test: ["CMD", "mosquitto_sub", "-h", "127.0.0.1", "-p", "1880", "-t", "$$SYS/#", "-C", "1", "-i", "healthcheck", "-W", "3"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+  # -------------------------- Accident monitor DB ------------------------ #
+  accident-monitor-db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: accident-monitor-db
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=${Sa_Password:-#TaoSieuDepTrai123}
+      - MSSQL_PID=Developer
+    ports:
+      - 1433:1433
+    volumes:
+      - accident_monitor_data:/var/opt/mssql
+    restart: unless-stopped
+    healthcheck:
+          test: /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$${SA_PASSWORD}" -Q "SELECT 1" -b -o /dev/null
+          interval: 10s
+          timeout: 3s
+          retries: 10
+          start_period: 10s
+    networks:
+      net_sim: 
+        ipv4_address: 172.20.0.20
+    labels:
+      - "traefik.enable=false"
+
+  # ------------------ Accident monitor DB Startup Config ------------------ #
+  accident-monitor-db.configurator:
+    container_name: accident-monitor-db.configurator
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    volumes:
+      - ./accident-monitor-db/init:/docker-entrypoint-initdb.d
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=${Sa_Password:-#TaoSieuDepTrai123}
+    depends_on:
+      accident-monitor-db:
+        condition: service_healthy
+    command: >
+      bash -c '
+      /opt/mssql-tools18/bin/sqlcmd -C -S accident-monitor-db -U sa -P "$${SA_PASSWORD}" -d master -i docker-entrypoint-initdb.d/init.sql;
+      echo "All done!";'
+    networks:
+      net_sim: 
+        ipv4_address: 172.20.0.21
+    restart: on-failure
+    labels:
+      - "traefik.enable=false"
+
+# -------------------------- Distributed Cache ------------------------ #
+  redis:
+    image: redis:8.0-rc1
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      net_sim: 
+        ipv4_address: 172.20.0.22
+    labels:
+      - "traefik.enable=false"
+
+  # -------------------------- Time Series Database ------------------------ #
+  influxdb:
+    image: influxdb:2.7.11
+    container_name: influxdb
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+      - ./influxdb-docker/config:/etc/influxdb2
+      - ./influxdb-docker/sample_data:/data
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=johnnaeder
+      - DOCKER_INFLUXDB_INIT_PASSWORD=Taodeptrai123@
+      - DOCKER_INFLUXDB_INIT_ORG=accident-monitor-org
+      - DOCKER_INFLUXDB_INIT_BUCKET=iot_status
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=TaoDuySieuDZ123@
+    networks:
+      net_sim: 
+        ipv4_address: 172.20.0.23
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=false"
+
+# -------------------------- Reverse Proxy Traefik ------------------------ #
+  traefik-proxy:
+    image: traefik:v3.4.0-rc1
+    container_name: traefik-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "3000:3000"
+      - "1883:1883"
+      - "8080:8080"
+      - "9001:9001"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./traefik-docker/traefik.yml:/etc/traefik/traefik.yml
+      - ./traefik-docker/certs:/etc/traefik/certs
+    networks: 
+      net_sim:
+        ipv4_address: 172.20.0.2
+    restart: unless-stopped
+
+# -------------------------- DNS server ------------------------ #
+  dns-service:
+    image: ubuntu/bind9:latest
+    container_name: bind9
+    hostname: dns-services
+    ports:
+      - "53:53/udp"
+      - "53:53/tcp"
+    volumes:
+      - ./bind9-docker/config/named.conf.options:/etc/bind/named.conf.options
+      - ./bind9-docker/config/named.conf.local:/etc/bind/named.conf.local
+      - ./bind9-docker/zones:/etc/bind/zones
+      - ./bind9-docker/cache:/var/cache/bind
+    restart: unless-stopped
+    networks:
+      net_sim:
+        ipv4_address: 172.20.0.3
+    labels:
+      - "traefik.enable=false"
+
+networks:
+  net_sim:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: br0
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/24
+          gateway: 172.20.0.1 
+
+volumes:
+  accident_monitor_data:
+    # driver: local
+    # driver_opts:
+    #     type: none
+    #     device: /home/accident_monitor_data
+    #     o: bind
+  redis_data:
+#     driver: local
+#     driver_opts:
+#       type: none
+#       device: /home/accident_monitor_data
+#       o: bind
+  influxdb_data:
+  grafana_data:

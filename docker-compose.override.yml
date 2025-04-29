@@ -1,0 +1,141 @@
+services:
+  # -------------------------- Accident monitor ------------------------ #
+  accident-monitor:
+    container_name: accident-monitor
+    build:
+      args:
+        BUILD_CONFIGURATION: Release
+      context: ./accident-monitor/
+      dockerfile: Dockerfile
+    # ports:
+    #   - "5000:80"
+    #   - "5001:443"
+    hostname: accident-monitor
+    depends_on:
+      accident-monitor-db:
+        condition: service_healthy
+        restart: true 
+      mosquitto:
+        condition: service_healthy
+        restart: true
+    volumes:
+      - ./accident-monitor/:/accident-monitor-app
+    environment:
+      # ASPIRE_ALLOW_UNSECURED_TRANSPORT: true,
+      ConnectionStrings__AccidentMonitorDB: "Server=accident-monitor-db,1433;Database=AccidentMonitorDB;User Id=sa;Password=#TaoSieuDepTrai123;TrustServerCertificate=True;"
+      MqttConnectionConfig__Broker: "mosquitto"
+      MqttConnectionConfig__ClientId: "accident-monitor-app"
+      MqttConnectionConfig__Password: "Taodeptrai123@"
+      MqttConnectionConfig__Username: "accidentMonitor"
+      MqttConnectionConfig__UseWebSocket: true
+      MqttConnectionConfig__Port: 9001
+      MqttConnectionConfig__Protocol: "ws"
+      ORS__Uri: "http://ors-app"
+      ORS__Port: 80
+      ORS_BasePath: "/v2"
+      ORS__ApiKey: ""
+      ASPNETCORE_HTTP_PORTS: 80
+      ASPNETCORE_HTTPS_PORTS: 443
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.accident-monitor.loadbalancer.server.port=80"
+      - "traefik.http.routers.accident-monitor-http.entrypoints=web"
+      - "traefik.http.routers.accident-monitor-http.rule=Host(`accident-monitor.duydz.tao`)"
+      - "traefik.http.routers.accident-monitor-https.entrypoints=websecure"
+      - "traefik.http.routers.accident-monitor-https.rule=Host(`accident-monitor.duydz.tao`)"
+      - "traefik.http.routers.accident-monitor-https.tls=true"
+    networks:
+      net_sim:
+        ipv4_address: 172.20.0.4
+    expose:
+      - "80"
+    restart: unless-stopped
+    # healthcheck:a
+    #   test: ["CMD-SHELL", "curl -f http://localhost:80/health || exit 1"]
+    #   interval: 30s
+    #   retries: 5
+    #   start_period: 20s
+    #   timeout: 10s
+
+  # -------------------------- IoT Monitor Service ------------------------ #
+  iot-monitor-service:
+    container_name: iot-monitor-service
+    build:
+      context: ./iot-monitor/
+      dockerfile: Dockerfile        
+    environment:
+      MqttConnectionConfig__Broker: "mosquitto"
+      MqttConnectionConfig__ClientId: "iot-monitor-app"
+      MqttConnectionConfig__Password: "Taodeptrai123@"
+      MqttConnectionConfig__Username: "iotMonitor"
+      MqttConnectionConfig__UseWebSocket: true
+      MqttConnectionConfig__Port: 9001
+      MqttConnectionConfig__Protocol: "mqtt"
+      InfluxDbSettings__Url: http://influxdb:8086
+      InfluxDbSettings__Token: TaoDuySieuDZ123@
+      InfluxDbSettings__Org: accident-monitor-org
+      InfluxDbSettings__Bucket: iot_status
+      DOTNET_ENVIRONMENT: Production
+      # DOTNET_ENVIRONMENT=Production
+      Logging__LogLevel__Default: Information 
+    depends_on:
+      - mosquitto
+      - influxdb
+    networks:
+      net_sim:
+        ipv4_address: 172.20.0.5
+    restart: unless-stopped
+    # deploy:
+    #   restart_policy:
+    #     condition: on-failure
+    #     delay: 5s
+    #     max_attempts: 5
+    #     window: 120s
+    labels:
+      - "traefik.enable=false"
+      
+  # ---------------- ORS application configuration ---------------- #
+  ors-app:
+    container_name: ors-app
+    # ports:
+    #   - "8081:80" 
+    image: openrouteservice/openrouteservice:v9.1.1
+    # user: "1000:1000" 
+    volumes: 
+      - ./ors-docker:/home/ors 
+    environment:
+      REBUILD_GRAPHS: True  
+      CONTAINER_LOG_LEVEL: INFO  
+      ORS_CONFIG_LOCATION: /home/ors/config/vietnam-latest.osm.yml  
+      XMS: 1g  # start RAM assigned to java
+      XMX: 7g  # max RAM assigned to java. Rule of Thumb: <PBF-size> * <profiles> * 2
+      # Example: 1.5 GB pbf size, two profiles (car and foot-walking)
+      # -> 1.5 * 2 * 2 = 6. Set xmx to be AT LEAST `-Xmx6g`
+      ADDITIONAL_JAVA_OPTS: "" 
+    networks:
+      net_sim:
+        ipv4_address: 172.20.0.6
+    expose:
+      - "80" 
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.ors-app.loadbalancer.server.port=80"      
+      - "traefik.http.routers.ors-app-http.entrypoints=web"
+      - "traefik.http.routers.ors-app-http.rule=Host(`ors-app.duydz.tao`)"
+      - "traefik.http.routers.ors-app-https.entrypoints=websecure"
+      - "traefik.http.routers.ors-app-https.rule=Host(`ors-app.duydz.tao`)"
+      - "traefik.http.routers.ors-app-https.tls=true"
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:8080/ors/v2/health || exit 1
+      start_period: 10m
+      interval: 30s
+      timeout: 2s
+      retries: 3
+      disable: true
+    # deploy:
+    #   restart_policy:
+    #     condition: on-failure
+    #     delay: 5s
+    #     max_attempts: 5
+    #     window: 120s
+    restart: unless-stopped
