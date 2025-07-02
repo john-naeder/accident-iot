@@ -26,12 +26,7 @@ The Accident IoT Monitoring System is designed to detect, monitor, and respond t
   - InfluxDB integration for time-series data storage
   - Real-time data analysis for accident detection
   - Notification system for alerts
-- Key files:
-  - `Program.cs`: Service configuration and dependency injection
-  - `Worker.cs`: Background service implementation
-  - `Application/`: Business logic layer
-  - `Infrastructure/`: External system integrations (MQTT, InfluxDB, Notifications)
-
+  - 
 #### 3. Accident Monitor Application (`accident-monitor/`)
 
 - .NET Clean Architecture application for monitoring and management
