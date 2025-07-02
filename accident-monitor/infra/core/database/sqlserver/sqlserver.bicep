@@ -17,7 +17,7 @@ param appUserPassword string
 
 param utcNowString string = utcNow('yyyyMMddHHmm')
 
-resource sqlServer 'Microsoft.Sql/servers@2022-05-01-preview' = {
+resource sqlServer 'Microsoft.Sql/servers@2021-11-01' = {
   name: name
   location: location
   tags: tags
@@ -41,7 +41,7 @@ resource sqlServer 'Microsoft.Sql/servers@2022-05-01-preview' = {
   }
 }
 
-resource sqlServerAuditingSettings 'Microsoft.Sql/servers/auditingSettings@2023-08-01-preview' = {
+resource sqlServerAuditingSettings 'Microsoft.Sql/servers/auditingSettings@2021-11-01' = {
   parent: sqlServer
   name: 'default'
   properties: {
@@ -50,13 +50,13 @@ resource sqlServerAuditingSettings 'Microsoft.Sql/servers/auditingSettings@2023-
   }
 }
 
-resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
+resource sqlDatabase 'Microsoft.Sql/servers/databases@2021-11-01' = {
   parent: sqlServer
   name: databaseName
   location: location
 }
 
-resource sqlDatabaseDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = if (!(empty(logAnalyticsWorkspaceId))) {
+resource sqlDatabaseDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01' = if (!(empty(logAnalyticsWorkspaceId))) {
   scope: sqlDatabase
   name: 'sqlDatabaseDiagnosticSettings'
   properties: {

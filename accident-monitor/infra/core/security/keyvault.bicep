@@ -30,7 +30,7 @@ resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' = {
   }
 }
 
-resource keyVault_DiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = if (!(empty(logAnalyticsWorkspaceId))) {
+resource keyVault_DiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01' = if (!(empty(logAnalyticsWorkspaceId))) {
   scope: keyVault
   name: 'keyVaultDiagnosticSettings'
   properties: {
